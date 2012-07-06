@@ -6,14 +6,14 @@ class HuslConverter {
   //Pass in HUSL values and get back RGB values
   //  H ranges from 0 to 360, S and L from 0 to 100.
   //RGB values will range from 0 to 1.
-  static List<num> HUSLtoRGB(num h, num s, num l) {
-    return _XYZ_RGB(_LUV_XYZ(_LCH_LUV(_HUSL_LCH([h, s, l]))));
+  static RgbColor HUSLtoRGB(HslColor hsl) {
+    return _XYZ_RGB(_LUV_XYZ(_LCH_LUV(_HUSL_LCH(hsl))));
   }
 
   //Pass in RGB values ranging from 0 to 1 and get back HUSL values.
   //H ranges from 0 to 360, S and L from 0 to 100.
-  static List<num> RGBtoHUSL( num r, num g, num b ) {
-    return _LCH_HUSL(_LUV_LCH(_XYZ_LUV(_RGB_XYZ([r, g, b]))));
+  static HslColor RGBtoHUSL(RgbColor rgb) {
+    return _LCH_HUSL(_LUV_LCH(_XYZ_LUV(_RGB_XYZ(rgb))));
   }
 
   static List<List<num>> get m() {
@@ -134,22 +134,18 @@ class HuslConverter {
     return tuple;
   }
 
-  static List<num> _XYZ_RGB(List<num> tuple) {
+  static RgbColor _XYZ_RGB(List<num> tuple) {
     final R = _fromLinear(_dotProduct(m[0], tuple));
     final G = _fromLinear(_dotProduct(m[1], tuple));
     final B = _fromLinear(_dotProduct(m[2], tuple));
 
-    tuple[0] = R;
-    tuple[1] = G;
-    tuple[2] = B;
-
-    return tuple;
+    return new RgbColor(R * 255, G * 255, B * 255);
   }
 
-  static List<num> _RGB_XYZ(List<num> tuple) {
-    final R = tuple[0];
-    final G = tuple[1];
-    final B = tuple[2];
+  static List<num> _RGB_XYZ(RgbColor rgb) {
+    final R = rgb.r / 255.0;
+    final G = rgb.g / 255.0;
+    final B = rgb.b / 255.0;
 
     final rgbl = [_toLinear(R), _toLinear(G), _toLinear(B)];
 
@@ -157,11 +153,7 @@ class HuslConverter {
     final Y = _dotProduct(m_inv[1], rgbl);
     final Z = _dotProduct(m_inv[2], rgbl);
 
-    tuple[0] = X;
-    tuple[1] = Y;
-    tuple[2] = Z;
-
-    return tuple;
+    return [X, Y, Z];
   }
 
   static List<num> _XYZ_LUV( List<num> tuple ) {
@@ -241,22 +233,14 @@ class HuslConverter {
     return tuple;
   }
 
-   static List<num> _HUSL_LCH(List<num> tuple) {
-    final H = tuple[0];
-    final S = tuple[1];
-    final L = tuple[2];
+   static List<num> _HUSL_LCH(HslColor hsl) {
+    final max = _maxChroma(hsl.l, hsl.h);
+    final C = max / 100.0 * hsl.s;
 
-    final max = _maxChroma(L, H);
-    final C = max / 100.0 * S;
-
-    tuple[0] = L;
-    tuple[1] = C;
-    tuple[2] = H;
-
-    return tuple;
+    return [hsl.l, C, hsl.h];
   }
 
-  static List<num> _LCH_HUSL(List<num> tuple) {
+  static HslColor _LCH_HUSL(List<num> tuple) {
     final L = tuple[0];
     final C = tuple[1];
     final H = tuple[2];
@@ -264,10 +248,6 @@ class HuslConverter {
     final max = _maxChroma(L, H);
     final S = C / max * 100;
 
-    tuple[0] = H;
-    tuple[1] = S;
-    tuple[2] = L;
-
-    return tuple;
+    return new HslColor(H, S / 100, L / 100);
   }
 }
